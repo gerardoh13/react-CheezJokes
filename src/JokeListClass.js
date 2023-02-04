@@ -20,8 +20,11 @@ class JokeListClass extends React.Component {
   }
 
   getJokes = async () => {
-    let j = [...this.state.jokes];
     let seenJokes = new Set();
+    let jokeVotes = JSON.parse(
+      window.localStorage.getItem("jokeVotes") || "[]"
+    );
+    let j = [...jokeVotes, ...this.state.jokes];
     try {
       while (j.length < this.props.numJokesToGet) {
         let res = await axios.get("https://icanhazdadjoke.com", {
@@ -43,6 +46,7 @@ class JokeListClass extends React.Component {
   };
 
   resetVotes = () => {
+    window.localStorage.setItem("jokeVotes", "[]");
     this.setState((prev) => ({
       jokes: prev.jokes.map((j) => ({ ...j, votes: 0 })),
     }));
@@ -60,7 +64,22 @@ class JokeListClass extends React.Component {
         j.id === id ? { ...j, votes: j.votes + delta } : j
       ),
     }));
+    this.addToLs(id, delta)
   };
+
+addToLs = (id, delta) => {
+  let jokeVotes = JSON.parse(window.localStorage.getItem("jokeVotes"));
+  let foundJoke = jokeVotes.find(j => j.id === id )
+  if (!foundJoke){
+    foundJoke = structuredClone(this.state.jokes.find(j => j.id === id))
+    jokeVotes.push(foundJoke)
+  }
+  foundJoke.votes = foundJoke.votes + delta
+  if (foundJoke.votes === 0){
+    jokeVotes = jokeVotes.filter(j => j.id !== id)
+  } 
+  window.localStorage.setItem("jokeVotes", JSON.stringify(jokeVotes));
+}
 
   toggleLock = (id) => {
     this.setState((prev) => ({
@@ -104,8 +123,8 @@ class JokeListClass extends React.Component {
           ))}
         </div>
         {sortedJokes.length < this.props.numJokesToGet ? (
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
         ) : null}
       </>
